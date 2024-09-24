@@ -3,7 +3,6 @@
 void sendMessageToServer (int socketServer, char* message) { 
 
 	int size = strlen(message);
-
 	int msgLength = send(socketServer, message, size, 0);
 
 	// Check the number of bytes sent
@@ -23,16 +22,27 @@ void receiveMessageFromServer (int socketServer, char* message){
 
 void receiveBoard (int socketServer, tBoard board){
 
+	int size = BOARD_HEIGHT * BOARD_WIDTH;
+	int messageLength = recv(socketServer, board, size, 0);
 
+	// Check read bytes
+	if (messageLength < 0)
+		showError("ERROR while reading from socket");
 }
 
 unsigned int receiveCode (int socketServer){
 
+	char* code;
+	int messageLength = recv(socketServer, code, sizeof(tString), 0);
 
-	return 0;
+	// Check read bytes
+	if (messageLength < 0)
+		showError("ERROR while reading from socket");
+
+	return atoi(code);
 }
 
-unsigned int readMove (){
+unsigned int readMove(){
 
 	tString enteredMove;
 	unsigned int move;
@@ -80,8 +90,18 @@ unsigned int readMove (){
 
 void sendMoveToServer (int socketServer, unsigned int move){
 
+	char* moveString;
+	sprintf(moveString, "d", move);
+	int msgLength = send(socketServer, moveString, sizeof(unsigned int), 0);
+
+	// Check the number of bytes sent
+	if (msgLength < 0)
+		showError("ERROR while writing to the socket");
 }
 
+// -------------------------------------------------------------------
+
+// -------------------------------------------------------------------
 
 int main(int argc, char *argv[]){
 
@@ -97,7 +117,6 @@ int main(int argc, char *argv[]){
 	unsigned int column;				/** Selected column */
 	unsigned int code;					/** Code sent/receive to/from server */
 	unsigned int endOfGame;				/** Flag to control the end of the game */
-
 
 
 	// Check arguments!
@@ -153,24 +172,44 @@ int main(int argc, char *argv[]){
 	// Receive rival's name
 	memset(rivalName, 0, STRING_LENGTH);
 	receiveMessageFromServer(socketfd, rivalName);
-	printf ("You are playing against %s\n", rivalName);
+	printf("You are playing against %s\n", rivalName);
 
 	// Init
 	endOfGame = FALSE;
 
 	// Game starts
-	printf ("Game starts!\n\n");
+	printf("Game starts!\n\n");
 
 	// While game continues...
 	while(!endOfGame){
 
-		// If it is my turn -> print board and input a valid column
+		// 1. Receive game code
+		code = receiveCode(socketfd);
+		
+		// 2. Print message
+		memset(message, 0, strlen(message));
+		receiveMessageFromServer(socketfd, message);
+		printf("%s\n", message);
+
+		// 3. Print board
 		memset(board, 0, strlen(board));
-		receiveMessageFromServer(socketfd, board);
+		receiveBoard(socketfd, board);
+		printBoard(board, message);
 
-		// If it is not my turn -> Wait
-		printf("Waiting %s to make a move...\n", rivalName);
-
+		switch (code){
+		case TURN_MOVE:
+			column = readMove();
+			sendMoveToServer(socketfd, column);
+			break;
+		case TURN_WAIT:
+			break;
+		case GAMEOVER_DRAW:
+			endOfGame = TRUE;
+			break;
+		default:
+			printf("Error: code unexpected\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	// Close socket

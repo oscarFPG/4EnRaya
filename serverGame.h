@@ -1,5 +1,4 @@
 #include "game.h"
-#include "gameTypes.h"
 
 /**
  * Send a message to the player. This includes the length of the message and the message itself
