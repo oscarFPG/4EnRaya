@@ -1,4 +1,5 @@
  #include "utils.h"
+ #include "gameTypes.h"
 
 /**
  * Send a message to the server. This includes the length of the message and the message itself

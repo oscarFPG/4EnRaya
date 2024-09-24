@@ -1,7 +1,7 @@
 #include "serverGame.h"
 
-void sendMessageToPlayer (int socketClient, char* message){
-
+void sendMessageToPlayer(int socketClient, char* message){
+		
 	int msgLength = send(socketClient, message, strlen(message), 0);
 
 	// Check the number of bytes sent
@@ -9,33 +9,33 @@ void sendMessageToPlayer (int socketClient, char* message){
 		showError("ERROR while writing to the socket");
 }
 
-void receiveMessageFromPlayer (int socketClient, char* message){
+void receiveMessageFromPlayer(int socketClient, char* message){
 
-	memset(message, 0, STRING_LENGTH);
-	int messageLength = recv(socketClient, message, STRING_LENGTH-1, 0);
+	int size = sizeof(tString);
+	if(strlen(message) != 0)
+		size = strlen(message);
+
+	int messageLength = recv(socketClient, message, size, 0);
 
 	// Check read bytes
 	if (messageLength < 0)
 		showError("ERROR while reading from socket");
+}
+
+void sendCodeToClient(int socketClient, unsigned int code){
+	
+}
+
+void sendBoardToClient(int socketClient, tBoard board){
 
 }
 
-void sendCodeToClient (int socketClient, unsigned int code){
-
-
-}
-
-void sendBoardToClient (int socketClient, tBoard board){
-
-
-}
-
-unsigned int receiveMoveFromPlayer (int socketClient){
+unsigned int receiveMoveFromPlayer(int socketClient){
 
 	return 0;
 }
 
-int getSocketPlayer (tPlayer player, int player1socket, int player2socket){
+int getSocketPlayer(tPlayer player, int player1socket, int player2socket){
 
 	int socket;
 
@@ -47,7 +47,7 @@ int getSocketPlayer (tPlayer player, int player1socket, int player2socket){
 	return socket;
 }
 
-tPlayer switchPlayer (tPlayer currentPlayer){
+tPlayer switchPlayer(tPlayer currentPlayer){
 
 	tPlayer nextPlayer;
 
@@ -75,12 +75,13 @@ int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress, tString* playe
 	if (socketPlayer < 0)
 		showError("ERROR while accepting");
 
-
-	//Nombre player
-	receiveMessageFromPlayer(socketPlayer, playerName);
-	printf("Se unio: %s.\n", playerName);
-
 	return socketPlayer;
+}
+
+tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
+
+	int number = rand() % 11;
+	return number % 2 == 0 ? player1 : player2;
 }
 // --------------------------------------------------------------------------------------------------------------------- //
 
@@ -105,46 +106,83 @@ int main(int argc, char *argv[]){
 
 
 
-		// Check arguments
-		if (argc != 2) {
-			fprintf(stderr,"ERROR wrong number of arguments\n");
-			fprintf(stderr,"Usage:\n$>%s port\n", argv[0]);
-			exit(1);
-		}
+	// Check arguments
+	if (argc != 2) {
+		fprintf(stderr,"ERROR wrong number of arguments\n");
+		fprintf(stderr,"Usage:\n$>%s port\n", argv[0]);
+		exit(1);
+	}
 
-		// Init seed
-		srand(time(NULL));
+	// Init seed
+	srand(time(NULL));
 
-		// Create the socket
-		socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	// Create the socket
+	socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	char *ip = inet_ntoa(serverAddress.sin_addr);
+	printf("IP address: %s\n", ip);
 
-		// Check
-		if (socketfd < 0)
-			showError("ERROR while opening socket");
+	// Check
+	if (socketfd < 0)
+		showError("ERROR while opening socket");
 
-		// Init server structure
-		memset(&serverAddress, 0, sizeof(serverAddress));
+	// Init server structure
+	memset(&serverAddress, 0, sizeof(serverAddress));
 
-		// Get listening port
-		port = atoi(argv[1]);
+	// Get listening port
+	port = atoi(argv[1]);
 
-		// Fill server structure
-		serverAddress.sin_family = AF_INET;
-		serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-		serverAddress.sin_port = htons(port);
+	// Fill server structure
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+	serverAddress.sin_port = htons(port);
 
-		// Bind
-		if (bind(socketfd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
-			 showError("ERROR while binding");
-
-		//Listening and more
-		socketPlayer1 = acceptPlayer(socketfd, &player1Address, &player1Name);
-		socketPlayer2 = acceptPlayer(socketfd, &player2Address, &player2Name);
-
-		//Send named palyers
-		sendMessageToPlayer(socketPlayer1, player2Name);
-		sendMessageToPlayer(socketPlayer2, player1Name);
+	// Bind
+	if (bind(socketfd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
+		showError("ERROR while binding");
 
 
-		return 0;
+	// Listening, accepting and getting name of both players
+	socketPlayer1 = acceptPlayer(socketfd, &player1Address, &player1Name);
+	receiveMessageFromPlayer(socketPlayer1, &player1Name);
+	printf("Se unió %s!\n", player1Name);
+
+	socketPlayer2 = acceptPlayer(socketfd, &player2Address, &player2Name);
+	receiveMessageFromPlayer(socketPlayer2, &player2Name);
+	printf("Se unió %s!\n", player2Name);
+
+	// Send rival name to both players
+	sendMessageToPlayer(socketPlayer1, player2Name);
+	sendMessageToPlayer(socketPlayer2, player1Name);
+
+	// Random selection of one player to start playing
+	currentPlayer = selectRandomPlayer(socketPlayer1, socketPlayer2);
+	if(currentPlayer == player1){
+		sendCodeToClient(socketPlayer1, TURN_MOVE);
+		sendCodeToClient(socketPlayer2, TURN_WAIT);
+		sendBoardToClient(socketPlayer1, board);
+	}
+	else{
+		sendCodeToClient(socketPlayer2, TURN_MOVE);
+		sendCodeToClient(socketPlayer1, TURN_WAIT);
+		sendBoardToClient(socketPlayer2, board);
+	}
+
+	// Loop to receive game movements from both players until one wins or a draw
+	while(endOfGame == 0){
+
+		// Receive player movement
+
+		// Check if it is a winning move
+
+		// Change turn
+
+	}
+	
+	// Show winner player message to both player
+
+	// Close sockets
+	shutdown(socketPlayer1, SHUT_RDWR);
+	shutdown(socketPlayer2, SHUT_RDWR);
+	
+	return 0;
 }
