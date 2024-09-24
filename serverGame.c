@@ -32,6 +32,7 @@ void sendBoardToClient(int socketClient, tBoard board){
 
 unsigned int receiveMoveFromPlayer(int socketClient){
 
+
 	return 0;
 }
 
@@ -79,10 +80,12 @@ int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress, tString* playe
 }
 
 tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
-
+	
 	int number = rand() % 11;
 	return number % 2 == 0 ? player1 : player2;
 }
+
+
 // --------------------------------------------------------------------------------------------------------------------- //
 
 int main(int argc, char *argv[]){
@@ -103,7 +106,6 @@ int main(int argc, char *argv[]){
 	int endOfGame;						/** Flag to control the end of the game*/
 	unsigned int column;				/** Selected column to insert the chip */
 	tString message;					/** Message sent to the players */
-
 
 
 	// Check arguments
@@ -156,29 +158,35 @@ int main(int argc, char *argv[]){
 
 	// Random selection of one player to start playing
 	currentPlayer = selectRandomPlayer(socketPlayer1, socketPlayer2);
-	if(currentPlayer == player1){
-		sendCodeToClient(socketPlayer1, TURN_MOVE);
-		sendCodeToClient(socketPlayer2, TURN_WAIT);
-		sendBoardToClient(socketPlayer1, board);
-	}
-	else{
-		sendCodeToClient(socketPlayer2, TURN_MOVE);
-		sendCodeToClient(socketPlayer1, TURN_WAIT);
-		sendBoardToClient(socketPlayer2, board);
-	}
 
 	// Loop to receive game movements from both players until one wins or a draw
 	while(endOfGame == 0){
 
+		// Current player makes a move
+		if(currentPlayer == player1){
+			sendCodeToClient(socketPlayer1, TURN_MOVE);
+			sendCodeToClient(socketPlayer2, TURN_WAIT);
+			sendBoardToClient(socketPlayer1, board);
+		}
+		else{
+			sendCodeToClient(socketPlayer2, TURN_MOVE);
+			sendCodeToClient(socketPlayer1, TURN_WAIT);
+			sendBoardToClient(socketPlayer2, board);
+		}
+
 		// Receive player movement
+		int currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
+		int moveStatus = receiveMoveFromPlayer(currentPlayerSocket);
 
 		// Check if it is a winning move
+		checkWinner(board, currentPlayerSocket);
 
 		// Change turn
-
+		switchPlayer(currentPlayer);
 	}
 	
 	// Show winner player message to both player
+
 
 	// Close sockets
 	shutdown(socketPlayer1, SHUT_RDWR);
