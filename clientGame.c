@@ -32,7 +32,7 @@ void receiveBoard (int socketServer, tBoard board){
 
 unsigned int receiveCode (int socketServer){
 
-	tString codeString;
+	char* codeString;
 	int msgLength = recv(socketServer, codeString, CODE_SIZE, 0);
 	printf("Recibidos %d bytes\n", msgLength);
 
