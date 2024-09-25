@@ -31,6 +31,9 @@
 /** False value */
 #define FALSE 0
 
+/** Code size */
+#define CODE_SIZE 5
+
 /** Code for performing a move */
 #define TURN_MOVE 70001
 

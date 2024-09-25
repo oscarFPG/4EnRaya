@@ -1,21 +1,17 @@
 #include "serverGame.h"
 
 void sendMessageToPlayer(int socketClient, char* message){
-		
-	int msgLength = send(socketClient, message, strlen(message), 0);
+
+	int messageLength = send(socketClient, message, strlen(message), 0);
 
 	// Check the number of bytes sent
-	if (msgLength < 0)
+	if (messageLength < 0)
 		showError("ERROR while writing to the socket");
 }
 
 void receiveMessageFromPlayer(int socketClient, char* message){
 
-	int size = sizeof(tString);
-	if(strlen(message) != 0)
-		size = strlen(message);
-
-	int messageLength = recv(socketClient, message, size, 0);
+	int messageLength = recv(socketClient, message, 10, 0);
 
 	// Check read bytes
 	if (messageLength < 0)
@@ -24,10 +20,14 @@ void receiveMessageFromPlayer(int socketClient, char* message){
 
 void sendCodeToClient(int socketClient, unsigned int code){
 	
-	char* codeString;
-	sprintf(codeString, "d", code);
-	int msgLength = send(socketClient, codeString, sizeof(unsigned int), 0);
+	tString codeString;
+	sprintf(codeString, "%d", code);
+	printf("Code integer: %d\n", code);
+	printf("Send string: %s\n", codeString);
 
+	int msgLength = send(socketClient, codeString, CODE_SIZE, 0);
+	printf("Enviados %d bytes\n", msgLength);
+	
 	// Check the number of bytes sent
 	if (msgLength < 0)
 		showError("ERROR while writing to the socket");
@@ -37,6 +37,7 @@ void sendBoardToClient(int socketClient, tBoard board){
 
 	int size = BOARD_HEIGHT * BOARD_WIDTH;
 	int msgLength = send(socketClient, board, size, 0);
+	memset(board, 0, strlen(board));
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -59,10 +60,10 @@ int getSocketPlayer(tPlayer player, int player1socket, int player2socket){
 
 	int socket;
 
-		if (player == player1)
-			socket = player1socket;
-		else
-			socket = player2socket;
+	if (player == player1)
+		socket = player1socket;
+	else
+		socket = player2socket;
 
 	return socket;
 }
@@ -71,16 +72,16 @@ tPlayer switchPlayer(tPlayer currentPlayer){
 
 	tPlayer nextPlayer;
 
-		if (currentPlayer == player1)
-			nextPlayer = player2;
-		else
-			nextPlayer = player1;
+	if (currentPlayer == player1)
+		nextPlayer = player2;
+	else
+		nextPlayer = player1;
 
 	return nextPlayer;
 }
 
 // --------------------------------------------------------------------------------------------------------------------- //
-int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress, tString* playerName){
+int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress, tString playerName){
 
 	// Listen
 	listen(socketfd, 10);
@@ -103,8 +104,6 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 	int number = rand() % 11;
 	return number % 2 == 0 ? player1 : player2;
 }
-
-
 // --------------------------------------------------------------------------------------------------------------------- //
 
 int main(int argc, char *argv[]){
@@ -163,27 +162,39 @@ int main(int argc, char *argv[]){
 
 
 	// Listening, accepting and getting name of both players
-	socketPlayer1 = acceptPlayer(socketfd, &player1Address, &player1Name);
+	socketPlayer1 = acceptPlayer(socketfd, &player1Address, player1Name);
 	memset(player1Name, 0, sizeof(tString));
 	receiveMessageFromPlayer(socketPlayer1, &player1Name);
+	printf("Jugador1: %s\n", player1Name);
 
-	socketPlayer2 = acceptPlayer(socketfd, &player2Address, &player2Name);
+	socketPlayer2 = acceptPlayer(socketfd, &player2Address, player2Name);
 	memset(player2Name, 0, sizeof(tString));
 	receiveMessageFromPlayer(socketPlayer2, &player2Name);
+	printf("Jugador2: %s\n", player2Name);
 
 	// Send rival name to both players
-	sendMessageToPlayer(socketPlayer1, player2Name);
-	sendMessageToPlayer(socketPlayer2, player1Name);
+	sendMessageToPlayer(socketPlayer1, &player2Name);
+	sendMessageToPlayer(socketPlayer2, &player1Name);
+
+	// Initialize the game board
+	initBoard(board);
 
 	// Random selection of one player to start playing
 	currentPlayer = selectRandomPlayer(socketPlayer1, socketPlayer2);
 
+	if(currentPlayer == player1)
+		printf("Turno del jugador1: %s\n", player1Name);
+	else
+		printf("Turno del jugador2: %s\n", player2Name);
+
 	// Loop to receive game movements from both players until one wins or a draw
-	int currentPlayerSocket;
 	tMove validMove;
+	int currentPlayerSocket;
 	unsigned int move;
+	unsigned int code;
 	int isWinner = FALSE;
 	int boardFull = FALSE;
+
 	while(endOfGame == FALSE){
 
 		validMove = fullColumn_move;
@@ -192,28 +203,49 @@ int main(int argc, char *argv[]){
 			// Current player makes a move
 			if(currentPlayer == player1){
 				
-				sendCodeToClient(socketPlayer1, TURN_MOVE);
-				sendMessageToPlayer(socketPlayer1, ("It's your turn. You play with: %s", PLAYER_1_CHIP));
-				sendBoardToClient(socketPlayer1, board);
+				code = TURN_MOVE;
+				sendCodeToClient(socketPlayer1, code);
 
-				sendCodeToClient(socketPlayer2, TURN_WAIT);
-				sendMessageToPlayer(socketPlayer1, ("Your rival is thinking...please, wait! You play with: %s", PLAYER_2_CHIP));
-				sendBoardToClient(socketPlayer2, board);
+				sprintf(&message, "It's your turn. You play with: %c", PLAYER_1_CHIP);
+				sendMessageToPlayer(socketPlayer1, &message);
+				memset(message, 0, strlen(message));
+				//sendBoardToClient(socketPlayer1, board);
+				
+				code = TURN_WAIT;
+				sendCodeToClient(socketPlayer2, code);
+
+				sprintf(&message, "Your rival is thinking...please, wait! You play with: ", PLAYER_2_CHIP);
+				sendMessageToPlayer(socketPlayer2, &message);
+				memset(message, 0, strlen(message));
+				//sendBoardToClient(socketPlayer2, board);
 			}
 			else{
-				sendCodeToClient(socketPlayer2, TURN_MOVE);
-				sendMessageToPlayer(socketPlayer1, ("It's your turn. You play with: %s", PLAYER_2_CHIP));
-				sendBoardToClient(socketPlayer2, board);
 
-				sendCodeToClient(socketPlayer1, TURN_WAIT);
-				sendMessageToPlayer(socketPlayer1, ("Your rival is thinking...please, wait! You play with: %s", PLAYER_1_CHIP));
-				sendBoardToClient(socketPlayer1, board);
+				code = TURN_MOVE;
+				sendCodeToClient(socketPlayer2, code);
+
+				sprintf(&message, "It's your turn. You play with: %c", PLAYER_2_CHIP);
+				sendMessageToPlayer(socketPlayer2, &message);
+				memset(message, 0, strlen(message));
+				//sendBoardToClient(socketPlayer2, board);
+
+				code = TURN_WAIT;
+				sendCodeToClient(socketPlayer1, code);
+				
+				sprintf(&message, "Your rival is thinking...please, wait! You play with: ", PLAYER_1_CHIP);
+				sendMessageToPlayer(socketPlayer1, &message);
+				memset(message, 0, strlen(message));
+				//sendBoardToClient(socketPlayer1, board);
 			}
 
+			shutdown(socketPlayer1, SHUT_RDWR);
+			shutdown(socketPlayer2, SHUT_RDWR);
+			exit(0);
+
 			// Receive player movement
-			currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
-			move = receiveMoveFromPlayer(currentPlayerSocket);
-			validMove = checkMove(board, move);
+			//currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
+			//move = receiveMoveFromPlayer(currentPlayerSocket);
+			//validMove = checkMove(board, move);
 		}
 		
 		// ACTUALLY make the move
