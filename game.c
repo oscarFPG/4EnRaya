@@ -1,7 +1,7 @@
 #include "game.h"
 
 
-void initBoard (tBoard board){
+void initBoard(tBoard board){
 
 	int i;
 
@@ -10,7 +10,7 @@ void initBoard (tBoard board){
 }
 
 
-tMove checkMove (tBoard board, unsigned int column){
+tMove checkMove(tBoard board, unsigned int column){
 
 	tMove move;
 
@@ -26,7 +26,7 @@ tMove checkMove (tBoard board, unsigned int column){
 }
 
 
-void insertChip (tBoard board, tPlayer player, unsigned int column){
+void insertChip(tBoard board, tPlayer player, unsigned int column){
 
 	char c;
 	unsigned int cell;
@@ -62,7 +62,7 @@ void insertChip (tBoard board, tPlayer player, unsigned int column){
 }
 
 
-int checkUp (tBoard board, unsigned int cell, char c){
+int checkUp(tBoard board, unsigned int cell, char c){
 
 	int found;
 
@@ -85,7 +85,7 @@ int checkUp (tBoard board, unsigned int cell, char c){
 }
 
 
-int checkRight (tBoard board, unsigned int cell, char c){
+int checkRight(tBoard board, unsigned int cell, char c){
 
 	int found;
 	int limit;
@@ -110,7 +110,7 @@ int checkRight (tBoard board, unsigned int cell, char c){
 }
 
 
-int checkUpLeft (tBoard board, unsigned int cell, char c){
+int checkUpLeft(tBoard board, unsigned int cell, char c){
 
 	int found;
 
@@ -136,7 +136,7 @@ int checkUpLeft (tBoard board, unsigned int cell, char c){
 }
 
 
-int checkUpRight (tBoard board, unsigned int cell, char c){
+int checkUpRight(tBoard board, unsigned int cell, char c){
 
 	int found;
 
@@ -162,7 +162,7 @@ int checkUpRight (tBoard board, unsigned int cell, char c){
 }
 
 
-int checkWinner (tBoard board, tPlayer player){
+int checkWinner(tBoard board, tPlayer player){
 
 	char c;
 	unsigned int found, i;
@@ -208,7 +208,7 @@ int checkWinner (tBoard board, tPlayer player){
 }
 
 
-int isBoardFull (tBoard board){
+int isBoardFull(tBoard board){
 
 	int i;
 	int emptyFound;
@@ -228,5 +228,3 @@ int isBoardFull (tBoard board){
 
 	return (!emptyFound);
 }
-
-

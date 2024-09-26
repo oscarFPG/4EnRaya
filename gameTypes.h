@@ -59,10 +59,10 @@ typedef char tBoard [BOARD_WIDTH * BOARD_HEIGHT];
 typedef char tString [STRING_LENGTH];
 
 /** Players */
-typedef enum {player1, player2} tPlayer;
+typedef enum { player1, player2 } tPlayer;
 
 /** Result for moves */
-typedef enum {OK_move, fullColumn_move} tMove;
+typedef enum { OK_move, fullColumn_move } tMove;
 
 // Thread parameters
 typedef struct threadArgs{

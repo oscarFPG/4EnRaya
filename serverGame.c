@@ -11,7 +11,8 @@ void sendMessageToPlayer(int socketClient, char* message){
 
 void receiveMessageFromPlayer(int socketClient, char* message){
 
-	int messageLength = recv(socketClient, message, 10, 0);
+	int messageLength = recv(socketClient, message, STRING_LENGTH - 1, 0);
+	message[messageLength] = '\0';
 
 	// Check read bytes
 	if (messageLength < 0)
@@ -20,14 +21,17 @@ void receiveMessageFromPlayer(int socketClient, char* message){
 
 void sendCodeToClient(int socketClient, unsigned int code){
 	
+	// Convert integer code to string 
 	tString codeString;
-	memset(codeString, 0, sizeof(codeString));
+	memset(&codeString, 0, STRING_LENGTH);
 	sprintf(codeString, "%d", code);
+	codeString[strlen(codeString)] = '\0';
+
 	printf("Code integer: %d\n", code);
 	printf("Send string: %s of %d bytes\n", codeString, strlen(codeString));
 
 	int msgLength = send(socketClient, codeString, CODE_SIZE, 0);
-	memset(codeString, 0, strlen(codeString));
+	memset(&codeString, 0, strlen(codeString));
 	printf("Enviados %d bytes\n", msgLength);
 	
 	// Check the number of bytes sent
@@ -39,7 +43,7 @@ void sendBoardToClient(int socketClient, tBoard board){
 
 	int size = BOARD_HEIGHT * BOARD_WIDTH;
 	int msgLength = send(socketClient, board, size, 0);
-	memset(board, 0, strlen(board));
+	printf("Enviados %d bytes\n", msgLength);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -123,7 +127,7 @@ int main(int argc, char *argv[]){
 	tMove moveResult;					/** Result of player's move */
 	tString player1Name;				/** Name of player 1 */
 	tString player2Name;				/** Name of player 2 */
-	int endOfGame = FALSE;				/** Flag to control the end of the game*/
+	int endOfGame;						/** Flag to control the end of the game*/
 	unsigned int column;				/** Selected column to insert the chip */
 	tString message;					/** Message sent to the players */
 
@@ -140,8 +144,6 @@ int main(int argc, char *argv[]){
 
 	// Create the socket
 	socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	char *ip = inet_ntoa(serverAddress.sin_addr);
-	printf("IP address: %s\n", ip);
 
 	// Check
 	if (socketfd < 0)
@@ -162,25 +164,29 @@ int main(int argc, char *argv[]){
 	if (bind(socketfd, (struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0)
 		showError("ERROR while binding");
 
+	printf("Server started! Waiting for players...\n");
+
+	// Initialize memory
+	memset(&board, 0, BOARD_HEIGHT * BOARD_WIDTH);
+	initBoard(&board);
+	memset(&player1Name, 0, STRING_LENGTH);
+	memset(&player2Name, 0, STRING_LENGTH);
+	memset(&message, 0, STRING_LENGTH);
+	endOfGame = FALSE;
 
 	// Listening, accepting and getting name of both players
 	socketPlayer1 = acceptPlayer(socketfd, &player1Address, player1Name);
-	memset(&player1Name, 0, sizeof(player1Name));
 	receiveMessageFromPlayer(socketPlayer1, &player1Name);
 	printf("Jugador1: %s\n", player1Name);
 
 	socketPlayer2 = acceptPlayer(socketfd, &player2Address, player2Name);
-	memset(&player2Name, 0, sizeof(player2Name));
 	receiveMessageFromPlayer(socketPlayer2, &player2Name);
 	printf("Jugador2: %s\n", player2Name);
 
 	// Send rival name to both players
 	sendMessageToPlayer(socketPlayer1, &player2Name);
 	sendMessageToPlayer(socketPlayer2, &player1Name);
-
-	// Initialize the game board
-	initBoard(board);
-
+	
 	// Random selection of one player to start playing
 	currentPlayer = selectRandomPlayer(socketPlayer1, socketPlayer2);
 	if(currentPlayer == player1)
@@ -188,20 +194,16 @@ int main(int argc, char *argv[]){
 	else
 		printf("Turno del jugador2: %s\n", player2Name);
 
-	memset(&player1Name, 0, strlen(player1Name));
-	memset(&player2Name, 0, strlen(player2Name));
-
 	// Loop to receive game movements from both players until one wins or a draw
-	tMove validMove;
-	int currentPlayerSocket;
-	unsigned int move;
-	unsigned int code;
+	int currentPlayerSocket = -1;
+	unsigned int move = -1;
+	unsigned int code = -1;
 	int isWinner = FALSE;
 	int boardFull = FALSE;
 
 	while(endOfGame == FALSE){
 
-		validMove = fullColumn_move;
+		tMove validMove = fullColumn_move;
 		while(validMove == fullColumn_move) {
 
 			// Current player makes a move
@@ -211,16 +213,16 @@ int main(int argc, char *argv[]){
 				sendCodeToClient(socketPlayer1, code);
 				code = TURN_WAIT;
 				sendCodeToClient(socketPlayer2, code);
-		
+
 				sprintf(&message, "It's your turn. You play with: %c", PLAYER_1_CHIP);
 				sendMessageToPlayer(socketPlayer1, &message);
-				memset(message, 0, strlen(message));
-				sprintf(&message, "Your rival is thinking...please, wait! You play with: ", PLAYER_2_CHIP);
+				memset(&message, 0, strlen(message));
+				sprintf(&message, "Your rival is thinking...please, wait! You play with: %c", PLAYER_2_CHIP);
 				sendMessageToPlayer(socketPlayer2, &message);
-				memset(message, 0, strlen(message));
+				memset(&message, 0, strlen(message));
 
-				//sendBoardToClient(socketPlayer1, board);
-				//sendBoardToClient(socketPlayer2, board);
+				sendBoardToClient(socketPlayer1, &board);
+				sendBoardToClient(socketPlayer2, &board);
 			}
 			else{
 				
@@ -228,16 +230,16 @@ int main(int argc, char *argv[]){
 				sendCodeToClient(socketPlayer2, code);
 				code = TURN_WAIT;
 				sendCodeToClient(socketPlayer1, code);
-		
+
 				sprintf(&message, "It's your turn. You play with: %c", PLAYER_2_CHIP);
 				sendMessageToPlayer(socketPlayer2, &message);
-				memset(message, 0, strlen(message));
-				sprintf(&message, "Your rival is thinking...please, wait! You play with: ", PLAYER_1_CHIP);
+				memset(&message, 0, strlen(message));
+				sprintf(&message, "Your rival is thinking...please, wait! You play with: %c", PLAYER_1_CHIP);
 				sendMessageToPlayer(socketPlayer1, &message);
-				memset(message, 0, strlen(message));
+				memset(&message, 0, strlen(message));
 
-				//sendBoardToClient(socketPlayer2, board);
-				//sendBoardToClient(socketPlayer1, board);
+				sendBoardToClient(socketPlayer2, &board);
+				sendBoardToClient(socketPlayer1, &board);
 			}
 
 			shutdown(socketPlayer1, SHUT_RDWR);

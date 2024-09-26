@@ -13,31 +13,34 @@ void sendMessageToServer (int socketServer, char* message) {
 void receiveMessageFromServer (int socketServer, char* message){
 
 	// Recibimos el mensaje
-	int msgLength = recv(socketServer, message, 10, 0);
+	int msgLength = recv(socketServer, message, STRING_LENGTH - 1, 0);
+	message[msgLength] = '\0';
 
 	// Check read bytes
 	if (msgLength < 0)
 		showError("ERROR while reading from socket");
 }
 
-void receiveBoard (int socketServer, tBoard board){
+void receiveBoard(int socketServer, tBoard board){
 
 	int size = BOARD_HEIGHT * BOARD_WIDTH;
-	int messageLength = recv(socketServer, board, size, 0);
+	int msgLength = recv(socketServer, board, size, 0);
 
 	// Check read bytes
-	if (messageLength < 0)
+	if (msgLength < 0)
 		showError("ERROR while reading from socket");
 }
 
 unsigned int receiveCode (int socketServer){
 
-	char* codeString;
+	tString codeString;
+	memset(&codeString, 0, STRING_LENGTH);
+
 	int msgLength = recv(socketServer, codeString, CODE_SIZE, 0);
-	printf("Recibidos %d bytes\n", msgLength);
+	codeString[msgLength] = '\0';
 
 	int code = atoi(codeString);
-	printf("Code received: %d\n", code);
+	memset(&codeString, 0, msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -94,10 +97,10 @@ unsigned int readMove(){
 
 void sendMoveToServer (int socketServer, unsigned int move){
 
-	char* moveString;
+	tString moveString;
 	sprintf(moveString, "d", move);
 	int msgLength = send(socketServer, moveString, sizeof(unsigned int), 0);
-	memset(moveString, 0, strlen(moveString));
+	memset(&moveString, 0, strlen(moveString));
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -170,38 +173,36 @@ int main(int argc, char *argv[]){
 
 	}while (strlen(playerName) <= 2);
 
-
 	// Send player's name to the server
 	sendMessageToServer(socketfd, playerName);
 
 	// Receive rival's name
+	memset(&rivalName, 0, STRING_LENGTH);
 	receiveMessageFromServer(socketfd, &rivalName);
 	printf("You are playing against %s\n", &rivalName);
-
-	// Init
-	endOfGame = FALSE;
 
 	// Game starts
 	printf("Game starts!\n\n");
 
 	// While game continues...
+	endOfGame = FALSE;
 	while(!endOfGame){
 
 		// 1. Receive game code
 		code = receiveCode(socketfd);
 
 		// 2. Print message
-		memset(message, 0, strlen(message));
+		memset(&message, 0, strlen(message));
 		receiveMessageFromServer(socketfd, &message);
 		printf("%s\n", message);
 
-		shutdown(socketfd, SHUT_RDWR);
-		printf("Leaving the game...\n");
-		exit(0);
-
 		// 3. Print board
-		//memset(board, 0, sizeof(board));
-		//receiveBoard(socketfd, board);
+		memset(&board, 0, BOARD_HEIGHT * BOARD_WIDTH);
+		memset(&message, 0, strlen(message));
+		receiveBoard(socketfd, &board);
+		printBoard(&board, &message);
+		
+		endOfGame = TRUE;
 
 		/*
 		switch (code){
@@ -226,5 +227,4 @@ int main(int argc, char *argv[]){
 	printf("Leaving the game...\n");
 
 	return 0;
-
 }

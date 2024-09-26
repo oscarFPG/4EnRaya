@@ -11,10 +11,10 @@ void printBoard (tBoard board, char* message){
 	int i, row, cell;
 
 	// Clear screen
-	//printf("\n%s\n", message);
+	printf("\n%s\n", message);
 
 	// Show column numbers
-	printf ("  0   1   2   3   4   5   6  \n");
+	printf("  0   1   2   3   4   5   6  \n");
 
 
 	// Draw each row
