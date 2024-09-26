@@ -2,8 +2,14 @@
 
 void sendMessageToServer (int socketServer, char* message) { 
 
+	// Enviamos el tamaño del mensaje
+	int size = strlen(message);
+	send(socketServer, &size, sizeof(size), 0);
+	printf("Enviamos %d bytes\n", size);
+
 	// Enviamos el mensaje
-	int msgLength = send(socketServer, message, strlen(message), 0);
+	int msgLength = send(socketServer, message, size, 0);
+	printf("%d bytes\n", msgLength);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -12,9 +18,14 @@ void sendMessageToServer (int socketServer, char* message) {
 
 void receiveMessageFromServer (int socketServer, char* message){
 
+	// Recibimos el tamaño del mensaje
+	int size;
+	recv(socketServer, &size, sizeof(size), 0);
+	printf("Recibimos %d bytes\n", size);
+
 	// Recibimos el mensaje
-	int msgLength = recv(socketServer, message, STRING_LENGTH - 1, 0);
-	message[msgLength] = '\0';
+	int msgLength = recv(socketServer, message, size, 0);
+	printf("%d bytes\n", msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -23,8 +34,7 @@ void receiveMessageFromServer (int socketServer, char* message){
 
 void receiveBoard(int socketServer, tBoard board){
 
-	int size = BOARD_HEIGHT * BOARD_WIDTH;
-	int msgLength = recv(socketServer, board, size, 0);
+	int msgLength = recv(socketServer, &board, BOARD_HEIGHT * BOARD_WIDTH, 0);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -33,14 +43,9 @@ void receiveBoard(int socketServer, tBoard board){
 
 unsigned int receiveCode (int socketServer){
 
-	tString codeString;
-	memset(&codeString, 0, STRING_LENGTH);
-
-	int msgLength = recv(socketServer, codeString, CODE_SIZE, 0);
-	codeString[msgLength] = '\0';
-
-	int code = atoi(codeString);
-	memset(&codeString, 0, msgLength);
+	int code;
+	int msgLength = recv(socketServer, &code, sizeof(code), 0);
+	printf("Recibidos %d bytes\n", msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -161,9 +166,9 @@ int main(int argc, char *argv[]){
 
 	// Init player's name
 	do{
-		memset(playerName, 0, STRING_LENGTH);
+		memset(&playerName, 0, STRING_LENGTH);
 		printf ("Enter player name: ");
-		fgets(playerName, STRING_LENGTH-1, stdin);
+		fgets(playerName, STRING_LENGTH - 1, stdin);
 
 		// Remove '\n'
 		playerName[strlen(playerName)-1] = 0;
@@ -179,7 +184,7 @@ int main(int argc, char *argv[]){
 	// Receive rival's name
 	memset(&rivalName, 0, STRING_LENGTH);
 	receiveMessageFromServer(socketfd, &rivalName);
-	printf("You are playing against %s\n", &rivalName);
+	printf("You are playing against %s\n", rivalName);
 
 	// Game starts
 	printf("Game starts!\n\n");
@@ -190,19 +195,18 @@ int main(int argc, char *argv[]){
 
 		// 1. Receive game code
 		code = receiveCode(socketfd);
+		printf("Code: %d\n", code);
 
 		// 2. Print message
-		memset(&message, 0, strlen(message));
+		memset(&message, 0, STRING_LENGTH);
 		receiveMessageFromServer(socketfd, &message);
 		printf("%s\n", message);
 
 		// 3. Print board
 		memset(&board, 0, BOARD_HEIGHT * BOARD_WIDTH);
-		memset(&message, 0, strlen(message));
+		memset(&message, 0, STRING_LENGTH);
 		receiveBoard(socketfd, &board);
 		printBoard(&board, &message);
-		
-		endOfGame = TRUE;
 
 		/*
 		switch (code){

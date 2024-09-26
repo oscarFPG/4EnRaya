@@ -10,7 +10,6 @@ void printBoard (tBoard board, char* message){
 
 	int i, row, cell;
 
-	// Clear screen
 	printf("\n%s\n", message);
 
 	// Show column numbers
@@ -32,7 +31,7 @@ void printBoard (tBoard board, char* message){
 		}
 
 		// End of the row!
-		printf ("|\n");
+		printf("|\n");
 	}
 
 	// Print the base
