@@ -12,3 +12,8 @@ Projecto de la asignatura de Programación de Sistemas Distribuídos
 
 # 30/09
 ## Todo arreglado!
+
+#01/10
+## Terminada la parte 1
+### Incluir hilos
+### Incluir records

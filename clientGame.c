@@ -31,7 +31,6 @@ void receiveMessageFromServer (int socketServer, char* message){
 void receiveBoard(int socketServer, tBoard board){
 
 	int msgLength = recv(socketServer, board, BOARD_HEIGHT * BOARD_WIDTH, 0);
-	printf("%d bytes recibidos de tablero\n", msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -42,7 +41,6 @@ unsigned int receiveCode (int socketServer){
 
 	int code;
 	int msgLength = recv(socketServer, &code, sizeof(code), 0);
-	printf("Recibidos %d bytes\n", msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -99,10 +97,7 @@ unsigned int readMove(){
 
 void sendMoveToServer (int socketServer, unsigned int move){
 
-	tString moveString;
-	sprintf(moveString, "d", move);
-	int msgLength = send(socketServer, moveString, sizeof(unsigned int), 0);
-	memset(&moveString, 0, strlen(moveString));
+	int msgLength = send(socketServer, &move, sizeof(move), 0);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -110,17 +105,14 @@ void sendMoveToServer (int socketServer, unsigned int move){
 }
 
 // -------------------------------------------------------------------
-void playerAction(const int socketfd, const unsigned int code, int* endOfGame, tBoard board, char* message){
+void playerAction(const int socketfd, const unsigned int code, tBoard board, char* message){
 
-	switch (code){
+	switch(code) {
 	case TURN_MOVE:
 		unsigned int column = readMove();
 		sendMoveToServer(socketfd, column);
 		break;
 	case TURN_WAIT:
-		break;
-	case GAMEOVER_DRAW:
-		endOfGame = TRUE;
 		break;
 	default:
 		printf("Error: code unexpected\n");
@@ -185,7 +177,7 @@ int main(int argc, char *argv[]){
 		fgets(playerName, STRING_LENGTH - 1, stdin);
 
 		// Remove '\n'
-		playerName[strlen(playerName)-1] = 0;
+		playerName[strlen(playerName) - 1] = 0;
 
 		// Display player name
 		printf("Welcome %s!\n", playerName);
@@ -205,11 +197,16 @@ int main(int argc, char *argv[]){
 
 	// While game continues...
 	endOfGame = FALSE;
-	while(!endOfGame){
+	while(endOfGame == FALSE){
 
 		// 1. Receive game code
 		code = receiveCode(socketfd);
-		printf("Code: %d\n", code);
+
+		// Check if game has ended
+		if(code == GAMEOVER_WIN || code == GAMEOVER_LOSE || code == GAMEOVER_DRAW){
+			endOfGame = TRUE;
+			continue;
+		}
 
 		// 2. Receive message
 		memset(&message, 0, STRING_LENGTH);
@@ -221,12 +218,19 @@ int main(int argc, char *argv[]){
 		printBoard(board, &message);
 
 		// 4. Player action
-		playerAction(socketfd, code, &endOfGame, board, &message);
+		memset(&message, 0, strlen(message));
+		playerAction(socketfd, code, board, &message);
 
 		// 5. Clear buffers
 		memset(&message, 0, strlen(message));
 	}
 
+	// Print game result
+	memset(&message, 0, STRING_LENGTH);
+	receiveMessageFromServer(socketfd, &message);
+	printf("%s\n", message);
+	memset(&message, 0, strlen(message));
+	
 	// Close socket
 	shutdown(socketfd, SHUT_RDWR);
 	printf("Leaving the game...\n");

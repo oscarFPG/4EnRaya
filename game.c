@@ -9,7 +9,6 @@ void initBoard(tBoard board){
 		board[i] = (char) EMPTY_CELL;
 }
 
-
 tMove checkMove(tBoard board, unsigned int column){
 
 	tMove move;
@@ -24,7 +23,6 @@ tMove checkMove(tBoard board, unsigned int column){
 
 	return move;
 }
-
 
 void insertChip(tBoard board, tPlayer player, unsigned int column){
 
@@ -61,7 +59,6 @@ void insertChip(tBoard board, tPlayer player, unsigned int column){
 	board[cell] = c;
 }
 
-
 int checkUp(tBoard board, unsigned int cell, char c){
 
 	int found;
@@ -83,7 +80,6 @@ int checkUp(tBoard board, unsigned int cell, char c){
 
 	return found;
 }
-
 
 int checkRight(tBoard board, unsigned int cell, char c){
 
@@ -108,7 +104,6 @@ int checkRight(tBoard board, unsigned int cell, char c){
 
 	return found;
 }
-
 
 int checkUpLeft(tBoard board, unsigned int cell, char c){
 
@@ -135,7 +130,6 @@ int checkUpLeft(tBoard board, unsigned int cell, char c){
 	return found;
 }
 
-
 int checkUpRight(tBoard board, unsigned int cell, char c){
 
 	int found;
@@ -161,7 +155,6 @@ int checkUpRight(tBoard board, unsigned int cell, char c){
 	return found;
 }
 
-
 int checkWinner(tBoard board, tPlayer player){
 
 	char c;
@@ -178,25 +171,25 @@ int checkWinner(tBoard board, tPlayer player){
 		c = PLAYER_2_CHIP;
 
 	// Check every cell in the board
-	while ((!found) && (i<(BOARD_WIDTH * BOARD_HEIGHT))){
+	while ((!found) && (i < (BOARD_WIDTH * BOARD_HEIGHT))){
 
 		// Is this cell occupied by current player?
 		if (board[i] == c){
 
 			// Check 4-line chips up
-			found = checkUp (board, i, c);
+			found = checkUp(board, i, c);
 
 			// Check 4-line chips right
 			if (!found)
-				found = checkRight (board, i, c);
+				found = checkRight(board, i, c);
 
 			// Check 4-line chips upLeft
 			if (!found)
-				found = checkUpLeft (board, i, c);
+				found = checkUpLeft(board, i, c);
 
 			// Check 4-line chips upRight
 			if (!found)
-				found = checkUpRight (board, i, c);
+				found = checkUpRight(board, i, c);
 		}
 
 		// Check next cell
@@ -206,7 +199,6 @@ int checkWinner(tBoard board, tPlayer player){
 
 	return found;
 }
-
 
 int isBoardFull(tBoard board){
 

@@ -41,7 +41,6 @@ void sendBoardToClient(int socketClient, tBoard board){
 
 	// Enviamos el tablero
 	int msgLength = send(socketClient, board, BOARD_HEIGHT * BOARD_WIDTH, 0);
-	printf("%d bytes enviados del tablero\n", msgLength);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -50,20 +49,19 @@ void sendBoardToClient(int socketClient, tBoard board){
 
 unsigned int receiveMoveFromPlayer(int socketClient){
 
-	char* move;
-	int messageLength = recv(socketClient, move, sizeof(unsigned int), 0);
+	unsigned int move;
+	int msgLength = recv(socketClient, &move, sizeof(move), 0);
 
 	// Check read bytes
-	if (messageLength < 0)
+	if (msgLength < 0)
 		showError("ERROR while reading from socket");
 
-	return atoi(move);
+	return move;
 }
 
 int getSocketPlayer(tPlayer player, int player1socket, int player2socket){
 
 	int socket;
-
 	if (player == player1)
 		socket = player1socket;
 	else
@@ -75,7 +73,6 @@ int getSocketPlayer(tPlayer player, int player1socket, int player2socket){
 tPlayer switchPlayer(tPlayer currentPlayer){
 
 	tPlayer nextPlayer;
-
 	if (currentPlayer == player1)
 		nextPlayer = player2;
 	else
@@ -192,9 +189,8 @@ int main(int argc, char *argv[]){
 		printf("Turno del jugador2: %s\n", player2Name);
 
 	// Loop to receive game movements from both players until one wins or a draw
-	int currentPlayerSocket = -1;
+	int currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
 	unsigned int move = -1;
-	unsigned int code = -1;
 	int isWinner = FALSE;
 	int boardFull = FALSE;
 
@@ -206,11 +202,11 @@ int main(int argc, char *argv[]){
 			// Current player makes a move
 			if(currentPlayer == player1){
 				
-				code = TURN_MOVE;
-				sendCodeToClient(socketPlayer1, code);
-				code = TURN_WAIT;
-				sendCodeToClient(socketPlayer2, code);
+				// Send turn code
+				sendCodeToClient(socketPlayer1, TURN_MOVE);
+				sendCodeToClient(socketPlayer2, TURN_WAIT);
 
+				// Send turn message
 				sprintf(&message, "It's your turn. You play with: %c", PLAYER_1_CHIP);
 				sendMessageToPlayer(socketPlayer1, &message);
 				memset(&message, 0, STRING_LENGTH);
@@ -218,17 +214,18 @@ int main(int argc, char *argv[]){
 				sendMessageToPlayer(socketPlayer2, &message);
 				memset(&message, 0, STRING_LENGTH);
 
+				// Send board state
 				printBoard(board, &message);
 				sendBoardToClient(socketPlayer1, board);
 				sendBoardToClient(socketPlayer2, board);
 			}
 			else{
 				
-				code = TURN_MOVE;
-				sendCodeToClient(socketPlayer2, code);
-				code = TURN_WAIT;
-				sendCodeToClient(socketPlayer1, code);
+				// Send turn code
+				sendCodeToClient(socketPlayer2, TURN_MOVE);
+				sendCodeToClient(socketPlayer1, TURN_WAIT);
 				
+				// Send turn message
 				sprintf(&message, "It's your turn. You play with: %c", PLAYER_2_CHIP);
 				sendMessageToPlayer(socketPlayer2, &message);
 				memset(&message, 0, STRING_LENGTH);
@@ -236,13 +233,13 @@ int main(int argc, char *argv[]){
 				sendMessageToPlayer(socketPlayer1, &message);
 				memset(&message, 0, STRING_LENGTH);
 
+				// Send board state
 				printBoard(board, &message);
 				sendBoardToClient(socketPlayer2, board);
 				sendBoardToClient(socketPlayer1, board);
 			}
 
 			// Receive player movement
-			currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
 			move = receiveMoveFromPlayer(currentPlayerSocket);
 			validMove = checkMove(board, move);
 		}
@@ -251,34 +248,40 @@ int main(int argc, char *argv[]){
 		insertChip(board, currentPlayer, move);
 
 		// Check if it is a winning move
-		isWinner = checkWinner(board, currentPlayerSocket);
+		isWinner = checkWinner(board, currentPlayer);
 		boardFull = isBoardFull(board);
 		endOfGame = isWinner || boardFull;
 
 		// Change turn
-		if(endOfGame == FALSE)
-			currentPlayerSocket = switchPlayer(currentPlayer);
+		if(endOfGame == FALSE){
+			currentPlayer = switchPlayer(currentPlayer);
+			currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
+		}
 	}
 	
-	// Show winner player message to both player
-	if(isWinner){
-		// Last player to move is the winner
-		sendCodeToClient(currentPlayerSocket, GAMEOVER_WIN);
-		sendMessageToPlayer(currentPlayerSocket, "You win!\n");
+	// Print last board status
+	printBoard(board, &message);
 
-		currentPlayerSocket = switchPlayer(currentPlayer);
+	// Show winner player message to both player
+	if(isWinner){	// Last player to move is the winner
+		sendCodeToClient(currentPlayerSocket, GAMEOVER_WIN);
+		sendMessageToPlayer(currentPlayerSocket, "You win!");
+
+		currentPlayer = switchPlayer(currentPlayer);
+		currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
 
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_LOSE);
-		sendMessageToPlayer(currentPlayerSocket, "You lose!\n");
+		sendMessageToPlayer(currentPlayerSocket, "You lose!");
 	}
 	else{
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_DRAW);
-		sendMessageToPlayer(currentPlayerSocket, "Draw!\n");
+		sendMessageToPlayer(currentPlayerSocket, "Draw!");
 
-		currentPlayerSocket = switchPlayer(currentPlayer);
+		currentPlayer = switchPlayer(currentPlayer);
+		currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
 
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_DRAW);
-		sendMessageToPlayer(currentPlayerSocket, "Draw!\n");
+		sendMessageToPlayer(currentPlayerSocket, "Draw!");
 	}
 
 	// Close sockets
