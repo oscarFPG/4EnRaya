@@ -6,7 +6,7 @@ void showError(const char *msg){
 }
 
 
-void printBoard (tBoard board, char* message){
+void printBoard(tBoard board, char* message){
 
 	int i, row, cell;
 

@@ -5,11 +5,9 @@ void sendMessageToPlayer(int socketClient, char* message){
 	// Enviamos el tamaño del mensaje
 	int size = strlen(message);
 	send(socketClient, &size, sizeof(size), 0);
-	printf("Enviamos %d bytes\n", size);
 
 	// Enviamos el mensaje
 	int msgLength = send(socketClient, message, size, 0);
-	printf("%d bytes\n", msgLength);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -21,12 +19,9 @@ void receiveMessageFromPlayer(int socketClient, char* message){
 	// Recibimos el tamaño del mensaje
 	int size;
 	recv(socketClient, &size, sizeof(size), 0);
-	printf("Recibimos %d bytes\n", size);
 
 	// Recibimos el mensaje
 	int msgLength = recv(socketClient, message, size, 0);
-
-	printf("%d bytes\n", msgLength);
 
 	// Check read bytes
 	if (msgLength < 0)
@@ -36,7 +31,6 @@ void receiveMessageFromPlayer(int socketClient, char* message){
 void sendCodeToClient(int socketClient, unsigned int code){
 
 	int msgLength = send(socketClient, &code, sizeof(code), 0);
-	printf("Enviados %d bytes\n", msgLength);
 	
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -46,8 +40,8 @@ void sendCodeToClient(int socketClient, unsigned int code){
 void sendBoardToClient(int socketClient, tBoard board){
 
 	// Enviamos el tablero
-	int msgLength = send(socketClient, &board, BOARD_HEIGHT * BOARD_WIDTH, 0);
-	printf("%d bytes\n", msgLength);
+	int msgLength = send(socketClient, board, BOARD_HEIGHT * BOARD_WIDTH, 0);
+	printf("%d bytes enviados del tablero\n", msgLength);
 
 	// Check the number of bytes sent
 	if (msgLength < 0)
@@ -224,9 +218,9 @@ int main(int argc, char *argv[]){
 				sendMessageToPlayer(socketPlayer2, &message);
 				memset(&message, 0, STRING_LENGTH);
 
-				printBoard(&board, &message);
-				sendBoardToClient(socketPlayer1, &board);
-				sendBoardToClient(socketPlayer2, &board);
+				printBoard(board, &message);
+				sendBoardToClient(socketPlayer1, board);
+				sendBoardToClient(socketPlayer2, board);
 			}
 			else{
 				
@@ -242,9 +236,9 @@ int main(int argc, char *argv[]){
 				sendMessageToPlayer(socketPlayer1, &message);
 				memset(&message, 0, STRING_LENGTH);
 
-				printBoard(&board, &message);
-				sendBoardToClient(socketPlayer2, &board);
-				sendBoardToClient(socketPlayer1, &board);
+				printBoard(board, &message);
+				sendBoardToClient(socketPlayer2, board);
+				sendBoardToClient(socketPlayer1, board);
 			}
 
 			// Receive player movement
