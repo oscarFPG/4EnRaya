@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c -g -Wall
+CFLAGS = -c -g -Wall -w
 
 EXECS = clientGame serverGame
 

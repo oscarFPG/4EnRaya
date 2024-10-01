@@ -68,4 +68,6 @@ typedef enum { OK_move, fullColumn_move } tMove;
 typedef struct threadArgs{
     int socketPlayer1;
     int socketPlayer2;
+    tString player1Name;
+    tString player2Name;
 } tThreadArgs;

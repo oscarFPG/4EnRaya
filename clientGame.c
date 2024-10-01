@@ -225,10 +225,11 @@ int main(int argc, char *argv[]){
 		memset(&message, 0, strlen(message));
 	}
 
-	// Print game result
+	// Print last game result: message + final board
 	memset(&message, 0, STRING_LENGTH);
 	receiveMessageFromServer(socketfd, &message);
-	printf("%s\n", message);
+	receiveBoard(socketfd, board);
+	printBoard(board, &message);
 	memset(&message, 0, strlen(message));
 	
 	// Close socket

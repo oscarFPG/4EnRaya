@@ -53,3 +53,39 @@ int getSocketPlayer (tPlayer player, int player1socket, int player2socket);
  */
 tPlayer switchPlayer (tPlayer currentPlayer);
 
+/**
+ * Accept a player
+ * 
+ * @param socketft Socket descriptor
+ * @param playerAddress Address of the incoming player
+ * @return Player socket descriptor
+*/
+int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress);
+
+/**
+ * Select a random player between both sockets
+ * 
+ * @param playerSocket1 Player1 socket
+ * @param playerSocket2 Player2 socket
+ * @return Random player socket from both
+*/
+tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2);
+
+/**
+ * Sends code, message and board to each player based on if they have to make a move or wait
+ * 
+ * @param turnPlayerSocket Players socket that moves
+ * @param turnPlayerchip Players chip that moves
+ * @param waitPlayerSocket Players socket that waits
+ * @param waitPlayerChip Players chip that moves
+ * @param message Buffer to send the messages
+ * @param board Board to send to both players
+*/
+void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board);
+
+/**
+ * Function to play a game from a thread
+ * 
+ * @param gameInfo Reference to threadArgs struct
+*/
+void* playGame(void* gameInfo);
