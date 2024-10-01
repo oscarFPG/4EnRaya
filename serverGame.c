@@ -1,7 +1,9 @@
 #include "serverGame.h"
 #include <pthread.h>
 
-const int MAX_MATCHES = 10;
+// Mutex
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
 
 void sendMessageToPlayer(int socketClient, char* message){
 
@@ -109,6 +111,63 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 	return number % 2 == 0 ? player1 : player2;
 }
 
+void saveRecord(){
+	
+	int contLine = 0;
+	tString records[3];
+	for(int i = 0; i < 3; i++){
+		memset(&records[i], 0, STRING_LENGTH);
+	}
+	int fd = open("recordFile.txt", O_CREAT | O_RDWR);
+	if( fd == -1){
+		printf("Error\n");
+		return 0;
+	}
+		
+	//Leer todo y guardar 1.anter y 2.anter SI EXISTEN
+	tString aux;
+	int countChar = 0;
+	memset(&aux, 0, STRING_LENGTH);
+	char c;
+
+	printf("AQUI\n");
+	while( read(fd, &c, 1) != 0){
+		
+		if(c == '\n'){
+			strncpy(&records[contLine], &aux, strlen(aux));
+			contLine++;
+			//Clear the aux buffer
+			memset(&aux, 0, countChar);
+			countChar = 0;
+		}
+		else {
+			strncpy(&aux[countChar], &c, 1);
+			
+			printf("AQUI %d letra: %c\n", countChar, c);
+			countChar++;
+		}
+		
+	}
+	strncpy(&records[contLine], &aux, strlen(aux));
+	contLine++;
+	//Clear the aux buffer
+	memset(&aux, 0, countChar);
+	countChar = 0;
+
+	printf("AQUI3\n");
+	for(int i = 0; i <3; i++){
+		printf("%s \n", records[i]);
+	}
+	
+
+	//Escribir todo en orden
+		//1. nuevo
+		//2. 1.anter
+		//3. 2.anter
+	
+
+}
+
 void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
 
 	// Send turn code
@@ -131,13 +190,13 @@ void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket,
 
 void* playGame(void* gameInfo){
 
-	tThreadArgs* playerInfo = (tThreadArgs *)gameInfo; 
+	tThreadArgs playerInfo = *(tThreadArgs *)gameInfo; 
 
 	tPlayer currentPlayer;							/** Current player */
 	struct sockaddr_in player1Address;				/** Client address structure for player 1 */
-	int socketPlayer1 = playerInfo->socketPlayer1;	/** Socket descriptor for player 1 */
+	int socketPlayer1 = playerInfo.socketPlayer1;	/** Socket descriptor for player 1 */
 	struct sockaddr_in player2Address;				/** Client address structure for player 2 */
-	int socketPlayer2 = playerInfo->socketPlayer2;	/** Socket descriptor for player 2*/
+	int socketPlayer2 = playerInfo.socketPlayer2;	/** Socket descriptor for player 2*/
 	tString message;								/** Message sent to the players */
 	tBoard board;									/** Board of the game */
 
@@ -146,15 +205,15 @@ void* playGame(void* gameInfo){
 	memset(&message, 0, STRING_LENGTH);
 
 	// Send player names
-	sendMessageToPlayer(socketPlayer1, &playerInfo->player2Name);
-	sendMessageToPlayer(socketPlayer2, &playerInfo->player1Name);
+	sendMessageToPlayer(socketPlayer1, &playerInfo.player2Name);
+	sendMessageToPlayer(socketPlayer2, &playerInfo.player1Name);
 
 	// Random selection of one player to start playing
 	currentPlayer = selectRandomPlayer(socketPlayer1, socketPlayer2);
 	if(currentPlayer == player1)
-		printf("Turno del jugador1: %s\n", playerInfo->player1Name);
+		printf("Turno del jugador1: %s\n", playerInfo.player1Name);
 	else
-		printf("Turno del jugador2: %s\n", playerInfo->player2Name);
+		printf("Turno del jugador2: %s\n", playerInfo.player2Name);
 
 	// Loop to receive game movements from both players until one wins or a draw
 	int currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
@@ -209,6 +268,12 @@ void* playGame(void* gameInfo){
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_LOSE);
 		sendMessageToPlayer(currentPlayerSocket, "You lose!");
 		sendBoardToClient(currentPlayerSocket, board);
+
+		//Write in recordFile Lokers
+		pthread_mutex_lock(&m);
+		saveRecord();
+		pthread_mutex_unlock(&m);
+
 	}
 	else{
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_DRAW);
@@ -247,10 +312,12 @@ int main(int argc, char *argv[]){
 	int socketPlayer2;					/** Socket descriptor for player 2 */
 
 	// Variables for multiple games
-	tThreadArgs matches[MAX_MATCHES];	/** Matches to play simultaneously */
-	int matchesCounter = 0;				/** Matches counter */
-	pthread_t matchThreads[MAX_MATCHES];/** Thread to play the matches */
+	tThreadArgs matchesInfo;				/** Matches to play simultaneously */				
+	pthread_t *matchThreads; 	/** Thread to play the matches */
 
+	//--------------------------------------------------------------------------------------------
+	saveRecord();
+	return 0;
 
 	// Check arguments
 	if (argc != 2) {
@@ -297,20 +364,23 @@ int main(int argc, char *argv[]){
 		printf("%s vs %s\n", player1Name, player2Name);
 
 		// Store both players sockets
-		matches[matchesCounter].socketPlayer1 = socketPlayer1;
-		matches[matchesCounter].socketPlayer2 = socketPlayer2;
+		matchesInfo.socketPlayer1 = socketPlayer1;
+		matchesInfo.socketPlayer2 = socketPlayer2;
 
 		// Clear both players buffers
-		memset(&matches[matchesCounter].player1Name, 0, STRING_LENGTH);
-		memset(&matches[matchesCounter].player2Name, 0, STRING_LENGTH);
+		memset(&matchesInfo.player1Name, 0, STRING_LENGTH);
+		memset(&matchesInfo.player2Name, 0, STRING_LENGTH);
 
 		// Store both players names in the buffer
-		strncpy(&matches[matchesCounter].player1Name, &player1Name, strlen(player1Name));
-		strncpy(&matches[matchesCounter].player2Name, &player2Name, strlen(player2Name));
+		strncpy(&matchesInfo.player1Name, &player1Name, strlen(player1Name));
+		strncpy(&matchesInfo.player2Name, &player2Name, strlen(player2Name));
+
+		//Create the Thread
+		matchThreads = malloc(sizeof(pthread_t));
 
 		// Play match
-		pthread_create(&matchThreads[matchesCounter], NULL, (void *)playGame, (void *)&matches[matchesCounter]);
-		++matchesCounter;
+		pthread_create(matchThreads, NULL, (void *)playGame, (void *)&matchesInfo);
+		free(matchThreads);
 	}
 		
 	return 0;
