@@ -112,12 +112,14 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 }
 
 void saveRecord(){
-	
+
 	int contLine = 0;
 	tString records[3];
 	for(int i = 0; i < 3; i++){
 		memset(&records[i], 0, STRING_LENGTH);
 	}
+
+	//Read open
 	int fd = open("recordFile.txt", O_CREAT | O_RDWR);
 	if( fd == -1){
 		printf("Error\n");
@@ -130,7 +132,6 @@ void saveRecord(){
 	memset(&aux, 0, STRING_LENGTH);
 	char c;
 
-	printf("AQUI\n");
 	while( read(fd, &c, 1) != 0){
 		
 		if(c == '\n'){
@@ -142,30 +143,34 @@ void saveRecord(){
 		}
 		else {
 			strncpy(&aux[countChar], &c, 1);
-			
-			printf("AQUI %d letra: %c\n", countChar, c);
 			countChar++;
 		}
 		
 	}
+	//The last one
 	strncpy(&records[contLine], &aux, strlen(aux));
 	contLine++;
 	//Clear the aux buffer
 	memset(&aux, 0, countChar);
-	countChar = 0;
+	countChar = 0; /*¿Que ocurre si esta vacio?*/
 
-	printf("AQUI3\n");
-	for(int i = 0; i <3; i++){
-		printf("%s \n", records[i]);
+	//Write open
+	close(fd);
+	fd = open("recordFile.txt", O_CREAT | O_RDWR | O_TRUNC);
+	if( fd == -1){
+		printf("Error\n");
+		return 0;
 	}
+	//1. nuevo
+	write()
+	write(fd, '\n', sizeof(aux));//Avanzar linea
+	//2. 1.anter
+	write(fd, records[0], sizeof(records[0]));
+	write(fd, '\n', sizeof(aux));//Avanzar linea
+	//3. 2.anter
+	write(fd, records[1], sizeof(records[1]));
 	
-
-	//Escribir todo en orden
-		//1. nuevo
-		//2. 1.anter
-		//3. 2.anter
-	
-
+	close(fd);
 }
 
 void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
