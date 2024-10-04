@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
-#include <fcntl.h>
+
 
 /** Board width (in number of cells) */
 #define BOARD_WIDTH 7

@@ -111,66 +111,70 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 	return number % 2 == 0 ? player1 : player2;
 }
 
-void saveRecord(){
+void saveRecord(tString ganador, tString perdedor){
 
-	int contLine = 0;
 	tString records[3];
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < 3; i++)
 		memset(&records[i], 0, STRING_LENGTH);
-	}
 
-	//Read open
-	int fd = open("recordFile.txt", O_CREAT | O_RDWR);
-	if( fd == -1){
+	FILE* fd = fopen("recordFile.txt", "r");
+	if(fd == NULL){
 		printf("Error\n");
 		return 0;
 	}
 		
-	//Leer todo y guardar 1.anter y 2.anter SI EXISTEN
+	// Leer todo y guardar 1.anter y 2.anter SI EXISTEN
 	tString aux;
 	int countChar = 0;
+	int contLine = 0;
 	memset(&aux, 0, STRING_LENGTH);
 	char c;
 
-	while( read(fd, &c, 1) != 0){
+	while( contLine < 3 && feof(fd) != 1 ){
 		
-		if(c == '\n'){
-			strncpy(&records[contLine], &aux, strlen(aux));
-			contLine++;
-			//Clear the aux buffer
-			memset(&aux, 0, countChar);
+		int readBytes = fread(&c, sizeof(char), 1, fd);
+		if(c != '\n'){
+			strncpy(&aux[countChar++], &c, 1);
+		}
+		else if(readBytes > 0){
+			strncpy(&aux[countChar++], &c, 1);
+			strncpy(&records[contLine++], &aux, strlen(aux));
+			memset(&aux, 0, countChar);	//Clear the aux buffer
 			countChar = 0;
 		}
-		else {
-			strncpy(&aux[countChar], &c, 1);
-			countChar++;
-		}
-		
 	}
-	//The last one
-	strncpy(&records[contLine], &aux, strlen(aux));
-	contLine++;
-	//Clear the aux buffer
-	memset(&aux, 0, countChar);
-	countChar = 0; /*¿Que ocurre si esta vacio?*/
+	fclose(fd);
 
-	//Write open
-	close(fd);
-	fd = open("recordFile.txt", O_CREAT | O_RDWR | O_TRUNC);
-	if( fd == -1){
+	// Escribir nueva informacion
+	fd = fopen("recordFile.txt", "w");
+	if(fd == NULL){
 		printf("Error\n");
 		return 0;
 	}
-	//1. nuevo
-	write()
-	write(fd, '\n', sizeof(aux));//Avanzar linea
-	//2. 1.anter
-	write(fd, records[0], sizeof(records[0]));
-	write(fd, '\n', sizeof(aux));//Avanzar linea
-	//3. 2.anter
-	write(fd, records[1], sizeof(records[1]));
+
+	// 1. Escribimos nuevo record primero -> Mas reciente
+	tString nuevo;
+	memset(&nuevo, 0, STRING_LENGTH);
+	sprintf(&nuevo, "%s gano a %s\n", ganador, perdedor);
+	int size = strlen(nuevo);
+	fwrite(nuevo, sizeof(char), size, fd);
+	if(ferror(fd) == 1){
+		printf("Error guardando nuevo record!\n");
+		exit(1);
+	}
+	memset(&nuevo, 0, strlen(nuevo));
+
+	// 2. Escribimos el segundo record mas reciente si existe
+	if(records[0][0] != '\0'){
+		fwrite(records[0], sizeof(char), strlen(records[0]), fd);
+	}
 	
-	close(fd);
+	// 3. Escribimos el tercer record mas reciente si existe
+	if(records[1][0] != '\0'){
+		fwrite(records[1], sizeof(char), strlen(records[1]), fd);
+	}
+
+	fclose(fd);
 }
 
 void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
@@ -274,11 +278,17 @@ void* playGame(void* gameInfo){
 		sendMessageToPlayer(currentPlayerSocket, "You lose!");
 		sendBoardToClient(currentPlayerSocket, board);
 
-		//Write in recordFile Lokers
-		pthread_mutex_lock(&m);
-		saveRecord();
-		pthread_mutex_unlock(&m);
-
+		// Write in recordFile protected with a mutex
+		if(currentPlayer == player1){	// Si el actual es player1, significa que gano el player2
+			pthread_mutex_lock(&m);
+				saveRecord(playerInfo.player2Name, playerInfo.player2Name);
+			pthread_mutex_unlock(&m);
+		}
+		else{
+			pthread_mutex_lock(&m);
+				saveRecord(playerInfo.player1Name, playerInfo.player2Name);
+			pthread_mutex_unlock(&m);
+		}
 	}
 	else{
 		sendCodeToClient(currentPlayerSocket, GAMEOVER_DRAW);
@@ -317,12 +327,9 @@ int main(int argc, char *argv[]){
 	int socketPlayer2;					/** Socket descriptor for player 2 */
 
 	// Variables for multiple games
-	tThreadArgs matchesInfo;				/** Matches to play simultaneously */				
-	pthread_t *matchThreads; 	/** Thread to play the matches */
+	tThreadArgs matchesInfo;			/** Matches to play simultaneously */				
+	pthread_t *matchThreads; 			/** Thread to play the matches */
 
-	//--------------------------------------------------------------------------------------------
-	saveRecord();
-	return 0;
 
 	// Check arguments
 	if (argc != 2) {
