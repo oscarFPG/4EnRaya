@@ -1,5 +1,6 @@
 #include "clientGame.h"
 
+// ------------------------------------------------ Auxiliary Functions ------------------------------------------------ //
 void sendMessageToServer (int socketServer, char* message) { 
 
 	// Enviamos el tamaño del mensaje
@@ -103,24 +104,24 @@ void sendMoveToServer (int socketServer, unsigned int move){
 	if (msgLength < 0)
 		showError("ERROR while writing to the socket");
 }
+// ------------------------------------------------ Auxiliary Functions ------------------------------------------------ //
 
-// -------------------------------------------------------------------
+// ---------------------------------------------- Our Auxiliary Functions ---------------------------------------------- //
 void playerAction(const int socketfd, const unsigned int code, tBoard board, char* message){
 
 	switch(code) {
-	case TURN_MOVE:
+	case TURN_MOVE: //When is his turn
 		unsigned int column = readMove();
 		sendMoveToServer(socketfd, column);
 		break;
-	case TURN_WAIT:
+	case TURN_WAIT: //When is not his turn
 		break;
-	default:
+	default: //Smething go wrong
 		printf("Error: code unexpected\n");
 		exit(EXIT_FAILURE);
 	}
 }
-
-// -------------------------------------------------------------------
+// ---------------------------------------------- Our Auxiliary Functions ---------------------------------------------- //
 
 int main(int argc, char *argv[]){
 

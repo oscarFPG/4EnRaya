@@ -4,7 +4,7 @@
 // Mutex
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
-
+// ------------------------------------------------ Auxiliary Functions ------------------------------------------------ //
 void sendMessageToPlayer(int socketClient, char* message){
 
 	// Enviamos el tamaño del mensaje
@@ -85,8 +85,9 @@ tPlayer switchPlayer(tPlayer currentPlayer){
 
 	return nextPlayer;
 }
+// ------------------------------------------------ Auxiliary Functions ------------------------------------------------ //
 
-// --------------------------------------------------------------------------------------------------------------------- //
+// ---------------------------------------------- Our Auxiliary Functions ---------------------------------------------- //
 int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress){
 
 	// Listen
@@ -113,6 +114,8 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 
 void saveRecord(tString ganador, tString perdedor){
 
+	// -------------- READ THE FILE -------------- //
+	//Initialize Records
 	tString records[3];
 	for(int i = 0; i < 3; i++)
 		memset(&records[i], 0, STRING_LENGTH);
@@ -123,7 +126,7 @@ void saveRecord(tString ganador, tString perdedor){
 		return 0;
 	}
 		
-	// Leer todo y guardar 1.anter y 2.anter SI EXISTEN
+	//Read and Save the las records
 	tString aux;
 	int countChar = 0;
 	int contLine = 0;
@@ -144,15 +147,17 @@ void saveRecord(tString ganador, tString perdedor){
 		}
 	}
 	fclose(fd);
+	// -------------- READ THE FILE -------------- //
 
-	// Escribir nueva informacion
+	// -------------- WRITE ON FILE -------------- //
+	//Write new information
 	fd = fopen("recordFile.txt", "w");
 	if(fd == NULL){
 		printf("Error\n");
 		return 0;
 	}
 
-	// 1. Escribimos nuevo record primero -> Mas reciente
+	// 1. Write the new record First -> This game 
 	tString nuevo;
 	memset(&nuevo, 0, STRING_LENGTH);
 	sprintf(&nuevo, "%s gano a %s\n", ganador, perdedor);
@@ -164,17 +169,18 @@ void saveRecord(tString ganador, tString perdedor){
 	}
 	memset(&nuevo, 0, strlen(nuevo));
 
-	// 2. Escribimos el segundo record mas reciente si existe
+	// 2. Write the Second record -> previously the first
 	if(records[0][0] != '\0'){
 		fwrite(records[0], sizeof(char), strlen(records[0]), fd);
 	}
 	
-	// 3. Escribimos el tercer record mas reciente si existe
+	// 3. Write the Third record -> previously the second
 	if(records[1][0] != '\0'){
 		fwrite(records[1], sizeof(char), strlen(records[1]), fd);
 	}
 
 	fclose(fd);
+	// -------------- WRITE ON FILE -------------- //
 }
 
 void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
@@ -196,7 +202,9 @@ void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket,
 	sendBoardToClient(turnPlayerSocket, board);
 	sendBoardToClient(waitPlayerSocket, board);
 }
+// ------------------------------------------------ Auxiliary Functions ------------------------------------------------ //
 
+// --------------------------------------------- Game MultiThreading Logic --------------------------------------------- //
 void* playGame(void* gameInfo){
 
 	tThreadArgs playerInfo = *(tThreadArgs *)gameInfo; 
@@ -281,12 +289,12 @@ void* playGame(void* gameInfo){
 		// Write in recordFile protected with a mutex
 		if(currentPlayer == player1){	// Si el actual es player1, significa que gano el player2
 			pthread_mutex_lock(&m);
-				saveRecord(playerInfo.player2Name, playerInfo.player2Name);
+			saveRecord(playerInfo.player2Name, playerInfo.player2Name);
 			pthread_mutex_unlock(&m);
 		}
 		else{
 			pthread_mutex_lock(&m);
-				saveRecord(playerInfo.player1Name, playerInfo.player2Name);
+			saveRecord(playerInfo.player1Name, playerInfo.player2Name);
 			pthread_mutex_unlock(&m);
 		}
 	}
@@ -308,7 +316,7 @@ void* playGame(void* gameInfo){
 	shutdown(socketPlayer2, SHUT_RDWR);
 	pthread_exit(NULL);
 }
-// --------------------------------------------------------------------------------------------------------------------- //
+// --------------------------------------------- Game MultiThreading Logic --------------------------------------------- //
 
 int main(int argc, char *argv[]){
 
