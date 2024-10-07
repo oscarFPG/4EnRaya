@@ -110,13 +110,15 @@ void sendMoveToServer (int socketServer, unsigned int move){
 void playerAction(const int socketfd, const unsigned int code, tBoard board, char* message){
 
 	switch(code) {
+	case REPEAT_TURN_MOVE:	// When player, for intance, tries to put a chip in a full column
+		printf("Column is full, try again!\n");
 	case TURN_MOVE: //When is his turn
 		unsigned int column = readMove();
 		sendMoveToServer(socketfd, column);
 		break;
 	case TURN_WAIT: //When is not his turn
 		break;
-	default: //Smething go wrong
+	default: //Something go wrong
 		printf("Error: code unexpected\n");
 		exit(EXIT_FAILURE);
 	}

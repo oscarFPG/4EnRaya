@@ -76,12 +76,13 @@ tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2);
  * 
  * @param turnPlayerSocket Players socket that moves
  * @param turnPlayerchip Players chip that moves
+ * @param typeMove Defines if it is the first try or not of the player
  * @param waitPlayerSocket Players socket that waits
  * @param waitPlayerChip Players chip that moves
  * @param message Buffer to send the messages
  * @param board Board to send to both players
 */
-void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board);
+void turnAction(int turnPlayerSocket, char turnPlayerChip, unsigned int typeMove, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board);
 
 /**
  * Function to play a game from a thread

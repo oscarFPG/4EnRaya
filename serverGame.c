@@ -108,7 +108,7 @@ int acceptPlayer(int socketfd, struct sockaddr_in* playerAddress){
 
 tPlayer selectRandomPlayer(int playerSocket1, int playerSocket2){
 	
-	int number = rand() % 11;
+	int number = rand() % 21;
 	return number % 2 == 0 ? player1 : player2;
 }
 
@@ -150,7 +150,7 @@ void saveRecord(tString ganador, tString perdedor){
 	// -------------- READ THE FILE -------------- //
 
 	// -------------- WRITE ON FILE -------------- //
-	//Write new information
+	// Write new information
 	fd = fopen("recordFile.txt", "w");
 	if(fd == NULL){
 		printf("Error\n");
@@ -183,10 +183,10 @@ void saveRecord(tString ganador, tString perdedor){
 	// -------------- WRITE ON FILE -------------- //
 }
 
-void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
+void turnAction(int turnPlayerSocket, char turnPlayerChip, unsigned int typeMove, int waitPlayerSocket, char waitPlayerChip, tString* message, tBoard board){
 
 	// Send turn code
-	sendCodeToClient(turnPlayerSocket, TURN_MOVE);
+	sendCodeToClient(turnPlayerSocket, typeMove);
 	sendCodeToClient(waitPlayerSocket, TURN_WAIT);
 
 	// Send turn message
@@ -197,8 +197,7 @@ void turnAction(int turnPlayerSocket, char turnPlayerChip, int waitPlayerSocket,
 	sendMessageToPlayer(waitPlayerSocket, message);
 	memset(message, 0, STRING_LENGTH);
 
-	// Send board state
-	printBoard(board, message);
+	// Send board
 	sendBoardToClient(turnPlayerSocket, board);
 	sendBoardToClient(waitPlayerSocket, board);
 }
@@ -216,6 +215,7 @@ void* playGame(void* gameInfo){
 	int socketPlayer2 = playerInfo.socketPlayer2;	/** Socket descriptor for player 2*/
 	tString message;								/** Message sent to the players */
 	tBoard board;									/** Board of the game */
+	unsigned int code;								/** Code for the player that has to move(TURN_MOVE or REPEAT_TURN_MOVE) */
 
 	// Initialize memory
 	initBoard(&board);
@@ -242,17 +242,22 @@ void* playGame(void* gameInfo){
 	while(endOfGame == FALSE){
 
 		tMove validMove = fullColumn_move;
+		int count = 0;
 		while(validMove == fullColumn_move) {
+
+			// Select the type of move(first try or not)
+			code = (count == 0) ? TURN_MOVE : REPEAT_TURN_MOVE;
 
 			// Current player makes a move
 			if(currentPlayer == player1)
-				turnAction(socketPlayer1, PLAYER_1_CHIP, socketPlayer2, PLAYER_2_CHIP, &message, board);
+				turnAction(socketPlayer1, PLAYER_1_CHIP, code, socketPlayer2, PLAYER_2_CHIP, &message, board);
 			else
-				turnAction(socketPlayer2, PLAYER_2_CHIP, socketPlayer1, PLAYER_1_CHIP, &message, board);
+				turnAction(socketPlayer2, PLAYER_2_CHIP, code, socketPlayer1, PLAYER_1_CHIP, &message, board);
 
 			// Receive player movement
 			move = receiveMoveFromPlayer(currentPlayerSocket);
 			validMove = checkMove(board, move);
+			count++;
 		}
 		
 		// ACTUALLY make the move
@@ -269,9 +274,6 @@ void* playGame(void* gameInfo){
 			currentPlayerSocket = getSocketPlayer(currentPlayer, socketPlayer1, socketPlayer2);
 		}
 	}
-	
-	// Print last board status
-	printBoard(board, &message);
 
 	// Show winner player message to both player
 	if(isWinner){	// Last player to move is the winner
@@ -289,7 +291,7 @@ void* playGame(void* gameInfo){
 		// Write in recordFile protected with a mutex
 		if(currentPlayer == player1){	// Si el actual es player1, significa que gano el player2
 			pthread_mutex_lock(&m);
-			saveRecord(playerInfo.player2Name, playerInfo.player2Name);
+			saveRecord(playerInfo.player2Name, playerInfo.player1Name);
 			pthread_mutex_unlock(&m);
 		}
 		else{

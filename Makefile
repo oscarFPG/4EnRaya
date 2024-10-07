@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -c -g -Wall -w
+CFLAGS = -c -g -Wall -w -lpthread
 
 EXECS = clientGame serverGame
 

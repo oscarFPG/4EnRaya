@@ -16,8 +16,3 @@
 # 01/10
 ## Terminada la parte 1
 ## Implementación de hilos para múltiples partidas simultáneas completada
-
-## Resto
-### Revisar posibles errores en la implementación de los hilos
-### Incluir archivo de records
-### Resolución de errores correctamente(Fallos en escritura, desconexiones, máximo de partidas simultáneas alcanzado, etc...)
