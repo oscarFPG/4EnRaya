@@ -376,6 +376,10 @@ int main(int argc, char *argv[]){
 	printf("Server started! Waiting for players...\n");
 	while(1){
 
+		// Clear buffers
+		memset(&player1Name, 0, STRING_LENGTH);
+		memset(&player2Name, 0, STRING_LENGTH);
+
 		// Wait for both players
 		socketPlayer1 = acceptPlayer(socketfd, &player1Address);
 		receiveMessageFromPlayer(socketPlayer1, &player1Name);
